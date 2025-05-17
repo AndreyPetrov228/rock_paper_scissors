@@ -1,113 +1,156 @@
 import pygame
+import random
+import sys
 
-W = 700
-H = 500
+pygame.init()
 
-window = pygame.display.set_mode((W, H))
-pygame.display.set_caption('Камень, ножницы, бумага')
-background = (114, 165, 247)
-window.fill(background)
+# Размеры окна
+WIDTH, HEIGHT = 600, 400
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Камень Ножницы Бумага")
+
+# Загрузка изображений (замените пути на свои)
+rock_img = pygame.image.load('rock.png')
+scissors_img = pygame.image.load('scissors.png')
+paper_img = pygame.image.load('paper.png')
+
+# Масштабируем изображения
+size = (100, 100)
+rock_img = pygame.transform.scale(rock_img, size)
+scissors_img = pygame.transform.scale(scissors_img, size)
+paper_img = pygame.transform.scale(paper_img, size)
+
+# Позиции для кнопок и их состояния
+positions = {
+    'камень': [50, 200],
+    'ножницы': [250, 200],
+    'бумага': [450, 200]
+}
+
+choices_images = {
+    'камень': rock_img,
+    'ножницы': scissors_img,
+    'бумага': paper_img
+}
+
+font = pygame.font.SysFont(None, 36)
+
+def get_computer_choice():
+    return random.choice(['камень', 'ножницы', 'бумага'])
+
+def determine_winner(user_choice, computer_choice):
+    if user_choice == computer_choice:
+        return "Ничья!"
+    elif (user_choice == 'камень' and computer_choice == 'ножницы') or \
+         (user_choice == 'ножницы' and computer_choice == 'бумага') or \
+         (user_choice == 'бумага' and computer_choice == 'камень'):
+        return "Вы выиграли!"
+    else:
+        return "Компьютер выиграл!"
 
 clock = pygame.time.Clock()
-FPS = 60
+user_choice = None
+computer_choice = None
+result_text = ""
 
-class GameSprite(pygame.sprite.Sprite):
-    def __init__(self, player_img, player_x, player_y, width, height, player_speed):
-        super().__init__()
-        self.image = pygame.transform.scale(pygame.image.load(player_img), (width, height))
-        self.speed = player_speed
-        self.rect = self.image.get_rect()
-        self.rect.x = player_x
-        self.rect.y = player_y
+# Счетчики побед и поражений
+score_wins = 0
+score_losses = 0
 
-    def reset(self):
-        window.blit(self.image, (self.rect.x, self.rect.y))
+# Для анимации кнопок: создадим словарь с состояниями
+buttons_state = {
+    'камень': {'rect': None, 'hovered': False},
+    'ножницы': {'rect': None, 'hovered': False},
+    'бумага': {'rect': None, 'hovered': False}
+}
 
-class Player(GameSprite):
-    def update_l(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w] and self.rect.y > 5:
-            self.rect.y -= self.speed
-        if keys[pygame.K_s] and self.rect.y < H - 100:
-            self.rect.y += self.speed
-    def update_r(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP] and self.rect.y > 5:
-            self.rect.y -= self.speed
-        if keys[pygame.K_DOWN] and self.rect.y < H - 100:
-            self.rect.y += self.speed
+# Размеры для анимации (увеличение при наведении)
+normal_size = (100, 100)
+hover_size = (120, 120)  # увеличиваем на 20 пикселей
 
-class Ball(GameSprite):
-    def update(self):
-        self.rect.y += self.speed
-        if self.rect.y < 0:
-            pass
+running = True
+while running:
+    screen.fill((255, 255, 255))
+    
+    mouse_pos = pygame.mouse.get_pos()
+    
+    # Обработка событий
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running=False
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            x,y = event.pos
+            # Проверка клика по кнопкам выбора
+            for choice in positions:
+                rect_obj = buttons_state[choice]['rect']
+                if rect_obj and rect_obj.collidepoint(x,y):
+                    user_choice = choice
+                    computer_choice = get_computer_choice()
+                    result_text = determine_winner(user_choice, computer_choice)
+                    # Обновляем счетчики побед/проигрышей
+                    if result_text == "Вы выиграли!":
+                        score_wins +=1
+                    elif result_text == "Компьютер выиграл!":
+                        score_losses +=1
 
-racket1 = Player('racket.png', 10, H // 2, 25, 100, 10)
-racket2 = Player('racket.png', W - 35, H // 2, 25, 100, 10)
-ball = GameSprite('ball.png', W // 2, H // 2, 50, 50, 0)
+    # Отрисовка кнопок с анимацией наведения
+    for choice in positions:
+        pos_x, pos_y = positions[choice]
+        hovered = False
+        
+        rect_obj = buttons_state[choice]['rect']
+        if rect_obj is None:
+            rect_obj = pygame.Rect(pos_x, pos_y, normal_size[0], normal_size[1])
+            buttons_state[choice]['rect'] = rect_obj
+        
+        # Проверка наведения мыши на кнопку
+        if rect_obj.collidepoint(mouse_pos):
+            hovered=True
+        
+        buttons_state[choice]['hovered'] = hovered
+        
+        # Выбор размера в зависимости от наведения (анимация)
+        current_size= hover_size if hovered else normal_size
+        
+        # Центрируем изображение по центру кнопки для плавной анимации
+        center_x= rect_obj.centerx
+        center_y= rect_obj.centery
+        
+        # Создаем новое изображение с нужным размером для эффекта масштабирования
+        img= choices_images[choice]
+        scaled_img=pygame.transform.scale(img,current_size)
+        
+        # Вычисляем позицию так чтобы изображение оставалось по центру кнопки при изменении размера
+        img_rect= scaled_img.get_rect(center=(center_x, center_y))
+        
+        screen.blit(scaled_img, img_rect.topleft)
 
-pygame.font.init()
-font = pygame.font.Font(None, 35)
-lose1 = font.render('Игрок 2 выйграл!', True, (180, 0, 0))
-lose2 = font.render('Игрок 1 выйграл!', True, (180, 0, 0))
-restart_game = font.render('Ражмите кнопку пробел для рестарта', True, (0, 0, 0))
+        # Обновляем прямоугольник для следующей итерации (чтобы учитывать изменение размера)
+        buttons_state[choice]['rect']=img_rect
 
-#музыка
+    # Отображение выбранных вариантов и результата после выбора
+    if user_choice:
+        user_text= font.render(f"Вы: {user_choice}", True,(0,0,0))
+        comp_text= font.render(f"Компьютер: {computer_choice}", True,(0,0,0))
+        
+        if result_text== "Вы выиграли!":
+            color= (0,255,0)
+        elif result_text== "Компьютер выиграл!":
+            color= (255,0,0)
+        else:
+            color= (255,165,0)
 
-pygame.mixer.init()
-pygame.mixer.music.load('MUSIC.ogg')
-pygame.mixer.music.play()
-pygame.mixer.music.set_volume(0.5)
+        result_rendered= font.render(result_text , True,color)
 
-speed_x = 5
-speed_y = 5
+        score_text= font.render(f"Побед: {score_wins}   Проигрышей: {score_losses}", True,(205,133 ,63))
+        
+        screen.blit(user_text,(50 ,20))
+        screen.blit(comp_text,(50 ,60))
+        screen.blit(result_rendered,(50 ,100))
+        screen.blit(score_text,(50 ,140))
 
-game = True
-finish = False
-while game:
-    for e in pygame.event.get():
-        if e.type == pygame.QUIT:
-            game = False
+    pygame.display.flip()
+    clock.tick(30)
 
-    if finish != True:
-        window.fill(background)
-
-        ball.rect.y += speed_y
-        ball.rect.x += speed_x
-
-        racket1.update_l()
-        racket2.update_r()
-
-        racket1.reset()
-        racket2.reset()
-        ball.reset()
-
-        #if ball.rect.y > H-50 or ball.rect.y < 0:
-            #speed_y *= -1
-
-        #if pygame.sprite.collide_rect(racket1, ball) and speed_x < 0:
-         #   speed_x *= -1
-          #  speed_y *= -1
-
-        #if pygame.sprite.collide_rect(racket2, ball) and speed_x > 0:
-         #   speed_x *= -1
-          #  speed_y *= -1
-
-        #if ball.rect.x < 0:
-         #   finish = True
-          #  window.blit(lose1, (200, 200))
-
-        #if ball.rect.x > W:
-         #   finish = True
-          #  window.blit(lose2, (200, 200))
-    #else:
-        window.blit(restart_game, (150, H-40))
-        keys_pressed = pygame.key.get_pressed()
-        if keys_pressed[pygame.K_SPACE]:
-            ball.rect.y = H//2
-            ball.rect.x = W//2
-            finish = False
-
-    pygame.display.update()
-    clock.tick(FPS)
+pygame.quit()
+sys.exit()
