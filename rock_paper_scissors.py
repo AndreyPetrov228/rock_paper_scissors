@@ -4,6 +4,12 @@ import sys
 
 pygame.init()
 
+#Музыка
+sound = pygame.mixer.Sound('Goodkill Music - Overcooked! Penne For Your Thoughts Gameplay Version.mp3')
+
+sound.play()
+
+
 # Размеры окна
 WIDTH, HEIGHT = 600, 400
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -56,6 +62,7 @@ result_text = ""
 # Счетчики побед и поражений
 score_wins = 0
 score_losses = 0
+score_draw = 0
 
 # Для анимации кнопок: создадим словарь с состояниями
 buttons_state = {
@@ -91,7 +98,9 @@ while running:
                     if result_text == "Вы выиграли!":
                         score_wins +=1
                     elif result_text == "Компьютер выиграл!":
-                        score_losses +=1
+                        score_losses += 1
+                    elif result_text == 'Ничья!':
+                        score_draw += 1
 
     # Отрисовка кнопок с анимацией наведения
     for choice in positions:
@@ -142,7 +151,7 @@ while running:
 
         result_rendered= font.render(result_text , True,color)
 
-        score_text= font.render(f"Побед: {score_wins}   Проигрышей: {score_losses}", True,(205,133 ,63))
+        score_text= font.render(f"Побед: {score_wins}   Проигрышей: {score_losses} Ничьих: {score_draw}", True,(205,133 ,63))
         
         screen.blit(user_text,(50 ,20))
         screen.blit(comp_text,(50 ,60))
